@@ -117,6 +117,35 @@
     textarea:focus { border-color: var(--orange); background: #fff; }
     textarea::placeholder { color: var(--text3); }
 
+    input[type="text"] {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text); font-size: 14px;
+      font-family: inherit; outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--orange); background: #fff; }
+    input[type="text"]::placeholder { color: var(--text3); }
+
+    select {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text); font-size: 14px;
+      font-family: inherit; outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9a93' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    select:focus { border-color: var(--orange); background-color: #fff; }
+    .field-row { margin-top: 16px; }
+
     .hint {
       font-size: 12px; color: var(--text3);
       margin-top: 8px; line-height: 1.5;
@@ -279,6 +308,11 @@
         <label for="descInput">Part description</label>
         <textarea id="descInput" rows="4"
           placeholder="e.g. Bracket for mounting motor to insertion axis of endoscope&#10;e.g. M3 flanged BHCS 12mm 18-8 hex&#10;e.g. Shoulder bolt 4mm shank 6mm long M2 18-8 hex"></textarea>
+
+        <div class="field-row">
+          <label for="subsystemInput">Subsystem (optional)</label>
+          <input type="text" id="subsystemInput" placeholder="e.g. Overtube, Roll Axis, Handle" />
+        </div>
 
         <div class="hint">
           <strong>Tip:</strong> Be specific — component type → function → location.
@@ -813,6 +847,7 @@ function tryExample(val) {
 
 function generateName() {
   const desc = document.getElementById('descInput').value.trim();
+  const subsystem = document.getElementById('subsystemInput').value.trim().toUpperCase();
   const warningEl = document.getElementById('warningEl');
   const resultBox = document.getElementById('resultBox');
 
@@ -824,7 +859,12 @@ function generateName() {
   }
 
   warningEl.classList.remove('visible');
-  const { name, confidence, warnings } = generatePartName(desc);
+  let { name, confidence, warnings } = generatePartName(desc);
+
+  // Append subsystem to non-fastener parts if not already present in the name
+  if (subsystem && !isFastener(desc) && !name.toUpperCase().includes(subsystem)) {
+    name = name + ', ' + subsystem;
+  }
 
   document.getElementById('resultName').textContent = name;
 
@@ -844,6 +884,7 @@ function clearResult() {
   document.getElementById('resultBox').classList.remove('visible');
   document.getElementById('warningEl').classList.remove('visible');
   document.getElementById('descInput').value = '';
+  document.getElementById('subsystemInput').value = '';
   document.getElementById('descInput').focus();
 }
 
