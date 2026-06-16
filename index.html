@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PLM Part Namer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange: #e86c1a;
+      --orange-dark: #c45a12;
+      --bg: #f5f4f1;
+      --surface: #ffffff;
+      --surface2: #f0eeea;
+      --border: #e0ddd7;
+      --text: #1a1a18;
+      --text2: #5a5a55;
+      --text3: #9a9a93;
+      --mono: 'Courier New', 'Consolas', monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #16181f;
+      border-bottom: 3px solid var(--orange);
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 30px; height: 30px;
+      background: var(--orange);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+    }
+    .logo-text { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.1em; text-transform: uppercase; }
+    .logo-sub  { font-size: 10px; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px; }
+    header .spacer { flex: 1; }
+    .header-badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      background: #2d3142; color: #9ca3af; padding: 4px 10px; border-radius: 20px;
+    }
+
+    /* ── Layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 0;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 740px) {
+      main { grid-template-columns: 1fr; padding: 16px; }
+      header { padding: 0 16px; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--orange); flex-shrink: 0;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── Form ── */
+    label {
+      display: block;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text2);
+      margin-bottom: 6px;
+    }
+    textarea {
+      width: 100%; padding: 12px 14px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text); font-size: 14px;
+      font-family: inherit; resize: vertical;
+      line-height: 1.6; outline: none;
+      transition: border-color 0.15s;
+      min-height: 100px;
+    }
+    textarea:focus { border-color: var(--orange); background: #fff; }
+    textarea::placeholder { color: var(--text3); }
+
+    .hint {
+      font-size: 12px; color: var(--text3);
+      margin-top: 8px; line-height: 1.5;
+    }
+    .hint strong { color: var(--text2); font-weight: 600; }
+
+    /* ── Quick examples ── */
+    .examples-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text3);
+      margin-bottom: 8px; margin-top: 18px;
+    }
+    .examples-grid {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .ex-btn {
+      font-size: 11px; padding: 5px 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text2);
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .ex-btn:hover { border-color: var(--orange); color: var(--orange); background: #fff8f4; }
+
+    /* ── Generate button ── */
+    .generate-btn {
+      width: 100%; margin-top: 18px; padding: 13px;
+      background: var(--orange); border: none; border-radius: var(--radius);
+      color: #fff; font-size: 14px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    .generate-btn:hover  { background: var(--orange-dark); }
+    .generate-btn:active { transform: scale(0.99); }
+
+    /* ── Result ── */
+    .result-box {
+      display: none; margin-top: 20px;
+      background: #fff8f2;
+      border: 1.5px solid #f5c89a;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .result-box.visible { display: block; }
+    .result-header {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #b85a10;
+      padding: 8px 14px; border-bottom: 1px solid #f5c89a;
+      background: #fff3e8;
+    }
+    .result-name {
+      font-family: var(--mono);
+      font-size: 16px; font-weight: 700;
+      color: var(--orange-dark);
+      padding: 14px 14px 10px;
+      letter-spacing: 0.03em;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .result-actions {
+      display: flex; gap: 8px;
+      padding: 0 14px 14px;
+    }
+    .copy-btn {
+      flex: 1; padding: 8px 12px;
+      background: var(--orange); border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .copy-btn:hover { background: var(--orange-dark); }
+    .copy-btn.copied { background: #2d7a4f; }
+    .retry-btn {
+      padding: 8px 14px;
+      background: transparent; border: 1px solid #f5c89a;
+      border-radius: 6px; color: #b85a10;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .retry-btn:hover { background: #fff3e8; }
+
+    /* ── Warning / error ── */
+    .warning {
+      display: none; margin-top: 16px;
+      font-size: 12px; color: #92400e;
+      padding: 10px 14px;
+      background: #fffbeb; border: 1px solid #fcd34d;
+      border-radius: var(--radius); line-height: 1.5;
+    }
+    .warning.visible { display: block; }
+
+    /* ── Confidence badge ── */
+    .confidence {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; padding: 3px 8px;
+      border-radius: 20px; margin-left: 8px;
+      vertical-align: middle;
+    }
+    .confidence.high   { background: #d1fae5; color: #065f46; }
+    .confidence.medium { background: #fef3c7; color: #92400e; }
+    .confidence.low    { background: #fee2e2; color: #991b1b; }
+
+    /* ── Side panel ── */
+    .side-card .card-body { padding: 16px 20px; }
+    .rule-section { margin-bottom: 18px; }
+    .rule-section:last-child { margin-bottom: 0; }
+    .rule-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--orange);
+      margin-bottom: 8px;
+    }
+    .rule-item {
+      font-size: 12px; color: var(--text2);
+      line-height: 1.6; padding: 3px 0;
+      padding-left: 14px; position: relative;
+    }
+    .rule-item::before {
+      content: '→';
+      position: absolute; left: 0;
+      color: var(--text3); font-size: 10px;
+    }
+    .rule-example {
+      font-family: var(--mono);
+      font-size: 11px; color: var(--orange-dark);
+      background: #fff8f2; border: 1px solid #f5c89a;
+      border-radius: 5px; padding: 6px 10px;
+      margin-top: 6px; line-height: 1.5;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; padding: 20px;
+      font-size: 11px; color: var(--text3);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">P</div>
+  <div>
+    <div class="logo-text">PLM Part Namer</div>
+    <div class="logo-sub">Standardized naming tool</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="header-badge">Rules-based · No API required</div>
+</header>
+
+<main>
+
+  <!-- Left: input + result -->
+  <div>
+    <div class="card">
+      <div class="card-header"><div class="dot"></div> Describe your part</div>
+      <div class="card-body">
+
+        <label for="descInput">Part description</label>
+        <textarea id="descInput" rows="4"
+          placeholder="e.g. Bracket for mounting motor to insertion axis of endoscope&#10;e.g. M3 flanged BHCS 12mm 18-8 hex&#10;e.g. Shoulder bolt 4mm shank 6mm long M2 18-8 hex"></textarea>
+
+        <div class="hint">
+          <strong>Tip:</strong> Be specific — component type → function → location.
+          For fasteners, include head type, size, length, material, and drive.
+        </div>
+
+        <div class="examples-label">Quick examples</div>
+        <div class="examples-grid">
+          <button class="ex-btn" onclick="tryExample('Bracket for mounting motor to insertion axis of endoscope')">Motor bracket</button>
+          <button class="ex-btn" onclick="tryExample('Geartrain input shaft for roll axis of overtube')">Geartrain shaft</button>
+          <button class="ex-btn" onclick="tryExample('M3 flanged button head cap screw 12mm long 18-8 stainless hex drive')">Flanged BHCS</button>
+          <button class="ex-btn" onclick="tryExample('M3 socket head cap screw 20mm 18-8 hex')">SHCS</button>
+          <button class="ex-btn" onclick="tryExample('Shoulder bolt 4mm diameter shank 6mm shank length M2 thread 18-8 hex')">Shoulder bolt</button>
+          <button class="ex-btn" onclick="tryExample('M2 truss head screw 8mm 18-8 phillips')">Truss screw</button>
+          <button class="ex-btn" onclick="tryExample('Overtube roll axis encoder PCBA')">Encoder PCBA</button>
+          <button class="ex-btn" onclick="tryExample('Robodrive ILM25x04 motor')">OTS motor</button>
+          <button class="ex-btn" onclick="tryExample('Futek 0.25 Nm torque sensor')">Torque sensor</button>
+          <button class="ex-btn" onclick="tryExample('Overtube roll motor assembly')">Motor assembly</button>
+          <button class="ex-btn" onclick="tryExample('0.34 oz Loctite 222 threadlocker')">Loctite</button>
+          <button class="ex-btn" onclick="tryExample('0.25W 1 kohm resistor')">Resistor</button>
+        </div>
+
+        <button class="generate-btn" onclick="generateName()">Generate Part Name</button>
+
+        <div class="warning" id="warningEl"></div>
+
+        <div class="result-box" id="resultBox">
+          <div class="result-header">
+            Suggested part name
+            <span class="confidence" id="confidenceBadge"></span>
+          </div>
+          <div class="result-name" id="resultName"></div>
+          <div class="result-actions">
+            <button class="copy-btn" id="copyBtn" onclick="copyResult()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy to clipboard
+            </button>
+            <button class="retry-btn" onclick="clearResult()">✕ Clear</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: rules reference -->
+  <div class="side-card">
+    <div class="card">
+      <div class="card-header"><div class="dot"></div> Naming rules</div>
+      <div class="card-body">
+
+        <div class="rule-section">
+          <div class="rule-title">General format</div>
+          <div class="rule-item">ALL CAPS, comma-separated</div>
+          <div class="rule-item">Component type → function → location</div>
+          <div class="rule-item">OTS parts: include make + model, omit location</div>
+          <div class="rule-item">Shared custom parts: omit location</div>
+          <div class="rule-example">BRACKET, MOUNTING, MOTOR, INSERTION, ENDOSCOPE</div>
+        </div>
+
+        <div class="rule-section">
+          <div class="rule-title">Standard fasteners</div>
+          <div class="rule-item">SHCS / BHCS / FHCS / PHCS first</div>
+          <div class="rule-item">Then: diameter, length, material, [coating], drive</div>
+          <div class="rule-example">SHCS, M3, 20 mm L, 18-8, HEX</div>
+        </div>
+
+        <div class="rule-section">
+          <div class="rule-title">Fastener variants</div>
+          <div class="rule-item">Add variant after head type</div>
+          <div class="rule-example">BHCS, FLANGED, M3, 12 mm L, 18-8, HEX</div>
+          <div class="rule-example">SHCS, LOW PROFILE, M5, 10 mm L, 10.9, HEX</div>
+        </div>
+
+        <div class="rule-section">
+          <div class="rule-title">Specialty fasteners</div>
+          <div class="rule-item">Lead with SCREW + head type</div>
+          <div class="rule-example">SCREW, TRUSS HEAD, M2, 8 mm L, 18-8, PHILLIPS</div>
+          <div class="rule-example">SCREW, SHOULDER BOLT, Ø4 mm, 6 mm LG, M2, 18-8, HEX</div>
+        </div>
+
+        <div class="rule-section">
+          <div class="rule-title">Non-standard pitch</div>
+          <div class="rule-item">Include pitch if not standard coarse</div>
+          <div class="rule-example">BHCS, M3 x 0.35, 14 mm L, 12.9, ZINC, TORX</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  PLM Part Namer · Rules-based naming engine · No data is sent to external servers
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+//  UTILITY
+// ─────────────────────────────────────────────
+function tok(str) {
+  return str.toLowerCase()
+    .replace(/[^\w\s\.\-\/]/g, ' ')
+    .replace(/\s+/g, ' ').trim().split(' ');
+}
+function has(tokens, ...words) {
+  return words.some(w => tokens.includes(w.toLowerCase()));
+}
+function hasPhrase(str, phrase) {
+  return str.toLowerCase().includes(phrase.toLowerCase());
+}
+function extractNum(str, pattern) {
+  const m = str.match(pattern);
+  return m ? m[0] : null;
+}
+
+// ─────────────────────────────────────────────
+//  FASTENER DETECTOR
+// ─────────────────────────────────────────────
+function isFastener(input) {
+  const s = input.toLowerCase();
+  return /\b(screw|shcs|bhcs|fhcs|phcs|bolt|fastener|socket head|button head|flat head|pan head|truss head|shoulder bolt|hex cap|cap screw)\b/.test(s);
+}
+
+function parseFastener(input) {
+  const s = input.toLowerCase();
+  const parts = [];
+  let confidence = 'high';
+  let warnings = [];
+
+  // ── 1. HEAD TYPE ──
+  let headType = null;
+  let variant = null;
+
+  if (/shoulder bolt/.test(s)) {
+    headType = 'SCREW';
+    variant = 'SHOULDER BOLT';
+  } else if (/truss head/.test(s)) {
+    headType = 'SCREW';
+    variant = 'TRUSS HEAD';
+  } else if (/hex head/.test(s) && !/socket/.test(s)) {
+    headType = 'SCREW';
+    variant = 'HEX HEAD';
+  } else if (/pan head/.test(s)) {
+    if (/socket|shcs|phcs/.test(s)) {
+      headType = 'PHCS';
+    } else {
+      headType = 'SCREW';
+      variant = 'PAN HEAD';
+    }
+  } else if (/flat head|countersunk|fhcs/.test(s)) {
+    headType = 'FHCS';
+    if (/low.?profile/.test(s)) variant = 'LOW PROFILE';
+  } else if (/button head|bhcs/.test(s)) {
+    headType = 'BHCS';
+    if (/flange|flanged/.test(s)) variant = 'FLANGED';
+    else if (/low.?profile/.test(s)) variant = 'LOW PROFILE';
+  } else if (/socket head|shcs/.test(s)) {
+    headType = 'SHCS';
+    if (/low.?profile/.test(s)) variant = 'LOW PROFILE';
+    if (/flange|flanged/.test(s)) variant = 'FLANGED';
+  } else if (/cap screw/.test(s)) {
+    headType = 'SHCS'; // default cap screw to SHCS
+    confidence = 'medium';
+    warnings.push('Could not determine head type — defaulted to SHCS. Please verify.');
+  } else {
+    headType = 'SCREW';
+    confidence = 'medium';
+    warnings.push('Head type not clearly identified — used SCREW as generic descriptor.');
+  }
+
+  if (headType === 'SCREW' && variant) {
+    parts.push('SCREW', variant);
+  } else if (variant) {
+    parts.push(headType, variant);
+  } else {
+    parts.push(headType);
+  }
+
+  // ── 2. DIAMETER & PITCH ──
+  if (variant === 'SHOULDER BOLT') {
+    // Shank diameter Ø
+    const shankDia = input.match(/(\d+(?:\.\d+)?)\s*mm\s*(?:dia(?:meter)?|shank dia(?:meter)?|\s*(?=.*shank))/i);
+    const justMm = input.match(/Ø?\s*(\d+(?:\.\d+)?)\s*mm/i);
+    if (shankDia) {
+      parts.push('Ø' + shankDia[1] + ' mm');
+    } else if (justMm) {
+      parts.push('Ø' + justMm[1] + ' mm');
+      confidence = 'medium';
+    }
+  } else {
+    // Standard thread
+    const pitchMatch = input.match(/M(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/i);
+    const threadMatch = input.match(/M(\d+(?:\.\d+)?)/i);
+    if (pitchMatch) {
+      parts.push('M' + pitchMatch[1] + ' x ' + pitchMatch[2]);
+    } else if (threadMatch) {
+      parts.push('M' + threadMatch[1]);
+    } else {
+      confidence = 'low';
+      warnings.push('Thread diameter not found. Please add (e.g. M3).');
+    }
+  }
+
+  // ── 3. LENGTH ──
+  if (variant === 'SHOULDER BOLT') {
+    // shank length LG + thread size
+    const lgMatch = input.match(/(\d+(?:\.\d+)?)\s*mm\s*(?:shank\s*length|lg|long(?:er)?)/i)
+      || input.match(/shank\s*(?:length\s*)?(\d+(?:\.\d+)?)\s*mm/i);
+    const threadM = input.match(/M(\d+(?:\.\d+)?)\s*thread/i) || input.match(/thread\s*M(\d+(?:\.\d+)?)/i);
+    if (lgMatch) parts.push(lgMatch[1] + ' mm LG');
+    if (threadM) parts.push('M' + threadM[1]);
+  } else {
+    const lenMatch = input.match(/(\d+(?:\.\d+)?)\s*mm\s*(?:l\b|long|length)/i)
+      || input.match(/(\d+(?:\.\d+)?)\s*mm(?!\s*(?:dia|shank|pitch|thread|x))/i);
+    if (lenMatch) {
+      parts.push(lenMatch[1] + ' mm L');
+    } else {
+      confidence = confidence === 'high' ? 'medium' : confidence;
+      warnings.push('Length not found. Please add (e.g. 12 mm long).');
+    }
+  }
+
+  // ── 4. MATERIAL / GRADE ──
+  const materialMap = [
+    [/18-8|18\/8/,         '18-8'],
+    [/316l/i,              '316L'],
+    [/316/i,               '316'],
+    [/304/i,               '304'],
+    [/grade\s*12\.9|12\.9/, '12.9'],
+    [/grade\s*10\.9|10\.9/, '10.9'],
+    [/grade\s*8\.8|8\.8/,  '8.8'],
+    [/\bA4\b/i,            'A4'],
+    [/\bA2\b/i,            'A2'],
+    [/titanium|ti-6/i,     'TITANIUM'],
+    [/alloy steel/i,       'ALLOY STEEL'],
+    [/stainless/i,         '18-8'],
+  ];
+  let matFound = false;
+  for (const [rx, label] of materialMap) {
+    if (rx.test(input)) { parts.push(label); matFound = true; break; }
+  }
+  if (!matFound) {
+    confidence = confidence === 'high' ? 'medium' : confidence;
+    warnings.push('Material/grade not found. Please add (e.g. 18-8, 10.9, A2).');
+  }
+
+  // ── 5. COATING (optional) ──
+  const coatings = [
+    [/black oxide/i,    'BLACK OXIDE'],
+    [/zinc[- ]nickel/i, 'ZINC-NICKEL'],
+    [/\bzinc\b/i,       'ZINC'],
+    [/nickel/i,         'NICKEL'],
+    [/gold/i,           'GOLD'],
+    [/chrome/i,         'CHROME'],
+    [/dacromet/i,       'DACROMET'],
+  ];
+  for (const [rx, label] of coatings) {
+    if (rx.test(s)) { parts.push(label); break; }
+  }
+
+  // ── 6. DRIVE ──
+  const drives = [
+    [/torx|t\d+/i,      'TORX'],
+    [/hex|allen|imbus/i,'HEX'],
+    [/phillips|ph/i,    'PHILLIPS'],
+    [/pozi/i,           'POZI'],
+    [/slot|flathead/i,  'SLOT'],
+    [/tri-wing/i,       'TRI-WING'],
+    [/square|robertson/i,'SQUARE'],
+  ];
+  let driveFound = false;
+  for (const [rx, label] of drives) {
+    if (rx.test(s)) { parts.push(label); driveFound = true; break; }
+  }
+  if (!driveFound) {
+    confidence = confidence === 'high' ? 'medium' : confidence;
+    warnings.push('Drive style not found. Please add (e.g. HEX, TORX, PHILLIPS).');
+  }
+
+  return { name: parts.join(', '), confidence, warnings };
+}
+
+// ─────────────────────────────────────────────
+//  COMPONENT TYPE LIBRARY
+// ─────────────────────────────────────────────
+const COMPONENT_TYPES = [
+  // Assemblies
+  { rx: /\bassy\b|assembly\b/i, label: 'ASSY' },
+  // Electronic
+  { rx: /\bpcba\b|printed circuit board assembly/i, label: 'PCBA' },
+  { rx: /\bpcb\b|printed circuit board/i, label: 'PCB' },
+  { rx: /\bcontroller\b/i, label: 'CONTROLLER' },
+  { rx: /\bencoder\b/i, label: 'ENCODER' },
+  { rx: /\bsensor\b/i, label: 'SENSOR' },
+  { rx: /\bmotor\b/i, label: 'MOTOR' },
+  { rx: /\bharness\b|wiring harness/i, label: 'HARNESS' },
+  { rx: /\bcable\b/i, label: 'CABLE' },
+  { rx: /\bresistor\b/i, label: 'RESISTOR' },
+  { rx: /\bcapacitor\b/i, label: 'CAPACITOR' },
+  { rx: /\binductor\b/i, label: 'INDUCTOR' },
+  { rx: /\bconnector\b/i, label: 'CONNECTOR' },
+  { rx: /\bswitch\b/i, label: 'SWITCH' },
+  { rx: /\bbutton\b(?!.*head)/i, label: 'BUTTON' },
+  // Mechanical
+  { rx: /\bbracket\b/i, label: 'BRACKET' },
+  { rx: /\bshaft\b/i, label: 'SHAFT' },
+  { rx: /\bgear\b(?!train)/i, label: 'GEAR' },
+  { rx: /\bgeartrain\b|gear train/i, label: 'GEARTRAIN' },
+  { rx: /\bpulley\b/i, label: 'PULLEY' },
+  { rx: /\bbearing\b/i, label: 'BEARING' },
+  { rx: /\bspring\b/i, label: 'SPRING' },
+  { rx: /\bplug\b/i, label: 'PLUG' },
+  { rx: /\bclamp\b/i, label: 'CLAMP' },
+  { rx: /\bplate\b/i, label: 'PLATE' },
+  { rx: /\bblock\b/i, label: 'BLOCK' },
+  { rx: /\blink\b/i, label: 'LINK' },
+  { rx: /\barm\b/i, label: 'ARM' },
+  { rx: /\bpin\b/i, label: 'PIN' },
+  { rx: /\bseal\b/i, label: 'SEAL' },
+  { rx: /\bo.?ring\b/i, label: 'O-RING' },
+  { rx: /\bgasket\b/i, label: 'GASKET' },
+  { rx: /\bhousing\b/i, label: 'HOUSING' },
+  { rx: /\bcover\b/i, label: 'COVER' },
+  { rx: /\bpanel\b/i, label: 'PANEL' },
+  { rx: /\bframe\b/i, label: 'FRAME' },
+  { rx: /\bbody\b/i, label: 'BODY' },
+  { rx: /\bbase\b/i, label: 'BASE' },
+  { rx: /\badapter\b/i, label: 'ADAPTER' },
+  { rx: /\bspacer\b/i, label: 'SPACER' },
+  { rx: /\bwasher\b/i, label: 'WASHER' },
+  { rx: /\bnut\b/i, label: 'NUT' },
+  { rx: /\binsert\b/i, label: 'INSERT' },
+  { rx: /\btube\b(?!.*overtube)/i, label: 'TUBE' },
+  { rx: /\bpipe\b/i, label: 'PIPE' },
+  { rx: /\bhinge\b/i, label: 'HINGE' },
+  { rx: /\bknob\b/i, label: 'KNOB' },
+  { rx: /\bhandle\b/i, label: 'HANDLE' },
+  { rx: /\bgrip\b/i, label: 'GRIP' },
+  { rx: /\bband\b/i, label: 'BAND' },
+  { rx: /\bcollar\b/i, label: 'COLLAR' },
+  { rx: /\bcoupling\b/i, label: 'COUPLING' },
+  { rx: /\bfitting\b/i, label: 'FITTING' },
+  // Consumable / OTS
+  { rx: /threadlocker|loctite/i, label: 'THREADLOCKER' },
+  { rx: /adhesive|epoxy/i, label: 'ADHESIVE' },
+  { rx: /lubricant|grease|oil/i, label: 'LUBRICANT' },
+];
+
+// Keyword → normalized token (for descriptor extraction)
+const STOP_WORDS = new Set([
+  'a','an','the','for','to','of','in','on','at','by','with','from','into',
+  'and','or','but','that','this','is','it','be','as','its','than','then',
+  'long','length','size','grade','type','style','drive','material','coating',
+  'diameter','thread','shank','head','screw','bolt','nut','washer',
+  'stainless','steel','alloy','carbon',
+]);
+
+// Known manufacturers / brands to preserve exactly
+const BRANDS = [
+  'robodrive','ingenia','futek','loctite','maxon','faulhaber','dynapar',
+  'renishaw','heidenhain','keyence','omron','sick','panasonic','nidec',
+  'kollmorgen','elmo','galil','trinamic','trinamic','trinamic',
+];
+
+// Known product-line patterns to preserve
+function extractBrandModel(input) {
+  const s = input.toLowerCase();
+  // Check for known brand
+  for (const b of BRANDS) {
+    if (s.includes(b)) {
+      const brand = b.toUpperCase();
+      // Try to grab model: word(s) after brand name
+      const rx = new RegExp(b + '\\s+([\\w\\-\\.]+(?:\\s+[\\w\\-\\.]+)?)', 'i');
+      const m = input.match(rx);
+      return m ? [brand, m[1].toUpperCase()] : [brand];
+    }
+  }
+  return null;
+}
+
+// Known function words
+const FUNCTION_MAP = {
+  'mounting': 'MOUNTING', 'mount': 'MOUNTING',
+  'input': 'INPUT', 'output': 'OUTPUT',
+  'wiring': 'WIRING',
+  'drive': 'DRIVE', 'driven': 'DRIVEN',
+  'idler': 'IDLER',
+};
+
+// Known locations / subsystems
+const LOCATION_MAP = {
+  'endoscope': 'ENDOSCOPE',
+  'overtube': 'OVERTUBE',
+  'insertion': 'INSERTION',
+  'roll': 'ROLL',
+  'pitch': 'PITCH',
+  'yaw': 'YAW',
+  'proximal': 'PROXIMAL',
+  'distal': 'DISTAL',
+  'handle': 'HANDLE',
+  'tip': 'TIP',
+  'shaft': 'SHAFT',
+  'axis': null, // absorbed into prior word (e.g. "roll axis" → ROLL AXIS)
+};
+
+// Known unit patterns
+const UNIT_PATTERNS = [
+  { rx: /(\d+(?:\.\d+)?)\s*(?:n\.?m|nm)\b/i,    fmt: v => v + ' Nm' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:k\s*ohm|kohm|kΩ)/i, fmt: v => v + ' kOHM' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:ohm|Ω)/i,          fmt: v => v + ' OHM' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:mw|milliwatt)/i,   fmt: v => v + ' mW' },
+  { rx: /(\d+(?:\.\d+)?)\s*w\b/i,                fmt: v => v + ' W' },
+  { rx: /(\d+(?:\.\d+)?)\s*oz\b/i,               fmt: v => v + ' oz' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:kg|kilogram)/i,    fmt: v => v + ' kg' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:g\b|gram)/i,       fmt: v => v + ' g' },
+  { rx: /(\d+(?:\.\d+)?)\s*(?:mm)\b/i,           fmt: v => v + ' mm' },
+];
+
+// ─────────────────────────────────────────────
+//  GENERAL PART PARSER
+// ─────────────────────────────────────────────
+function parseGeneral(input) {
+  const s = input.toLowerCase();
+  const parts = [];
+  let confidence = 'high';
+  let warnings = [];
+
+  // ── Component type ──
+  let compType = null;
+  for (const ct of COMPONENT_TYPES) {
+    if (ct.rx.test(input)) { compType = ct.label; break; }
+  }
+  if (!compType) {
+    // Try to use first meaningful noun from input
+    const words = input.replace(/[^a-zA-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()));
+    compType = words[0] ? words[0].toUpperCase() : 'PART';
+    confidence = 'medium';
+    warnings.push('Component type not recognized — used first noun. Please verify.');
+  }
+  parts.push(compType);
+
+  // ── Extract specs with units ──
+  const specs = [];
+  for (const up of UNIT_PATTERNS) {
+    const m = input.match(up.rx);
+    if (m) specs.push(up.fmt(m[1]));
+  }
+
+  // ── Brand + model ──
+  const brandModel = extractBrandModel(input);
+
+  // ── Extract meaningful descriptor tokens ──
+  // Remove component type word from consideration, strip units/numbers
+  let work = input
+    .replace(new RegExp(compType.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), '')
+    .replace(/\d+(?:\.\d+)?\s*(?:nm|kohm|ohm|mw|w|oz|kg|g\b|mm)/gi, '')
+    .replace(/\d+/g, '')
+    .replace(/[^a-zA-Z\s]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+
+  const tokens = work.split(' ').map(t => t.toLowerCase()).filter(t => t.length > 1 && !STOP_WORDS.has(t));
+
+  // Build descriptor list
+  const descriptors = [];
+
+  // Check for axis combos (e.g. "roll axis", "insertion axis")
+  let axisHandled = [];
+  for (let i = 0; i < tokens.length - 1; i++) {
+    if (tokens[i+1] === 'axis') {
+      const combo = tokens[i].toUpperCase() + ' AXIS';
+      descriptors.push(combo);
+      axisHandled.push(tokens[i], 'axis');
+    }
+  }
+
+  // Add function words
+  for (const t of tokens) {
+    if (axisHandled.includes(t)) continue;
+    if (FUNCTION_MAP[t]) descriptors.push(FUNCTION_MAP[t]);
+  }
+
+  // Add location words (not already captured)
+  const locTerms = [];
+  for (const t of tokens) {
+    if (axisHandled.includes(t)) continue;
+    if (LOCATION_MAP[t] !== undefined && LOCATION_MAP[t] !== null) locTerms.push(LOCATION_MAP[t]);
+  }
+
+  // Brand + model takes precedence over generic descriptors
+  if (brandModel) {
+    parts.push(...brandModel);
+    // Add specs
+    parts.push(...specs);
+  } else {
+    // Add function descriptors, then location
+    const seen = new Set();
+    for (const d of [...descriptors, ...locTerms]) {
+      if (!seen.has(d) && d !== compType) { seen.add(d); parts.push(d); }
+    }
+    // Add any specs
+    parts.push(...specs);
+  }
+
+  if (parts.length <= 1) {
+    confidence = 'low';
+    warnings.push('Not enough information found to build a full name. Add more detail about function and location.');
+  }
+
+  return { name: parts.join(', '), confidence, warnings };
+}
+
+// ─────────────────────────────────────────────
+//  MAIN ENTRY
+// ─────────────────────────────────────────────
+function generatePartName(input) {
+  if (isFastener(input)) {
+    return parseFastener(input);
+  } else {
+    return parseGeneral(input);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  UI
+// ─────────────────────────────────────────────
+function tryExample(val) {
+  document.getElementById('descInput').value = val;
+  generateName();
+}
+
+function generateName() {
+  const desc = document.getElementById('descInput').value.trim();
+  const warningEl = document.getElementById('warningEl');
+  const resultBox = document.getElementById('resultBox');
+
+  if (!desc) {
+    warningEl.textContent = 'Please enter a part description first.';
+    warningEl.classList.add('visible');
+    resultBox.classList.remove('visible');
+    return;
+  }
+
+  warningEl.classList.remove('visible');
+  const { name, confidence, warnings } = generatePartName(desc);
+
+  document.getElementById('resultName').textContent = name;
+
+  const badge = document.getElementById('confidenceBadge');
+  badge.textContent = confidence === 'high' ? '✓ High confidence' : confidence === 'medium' ? '⚠ Review suggested' : '✕ Low confidence';
+  badge.className = 'confidence ' + confidence;
+
+  if (warnings.length > 0) {
+    warningEl.innerHTML = '<strong>Review needed:</strong><br>' + warnings.map(w => '• ' + w).join('<br>');
+    warningEl.classList.add('visible');
+  }
+
+  resultBox.classList.add('visible');
+}
+
+function clearResult() {
+  document.getElementById('resultBox').classList.remove('visible');
+  document.getElementById('warningEl').classList.remove('visible');
+  document.getElementById('descInput').value = '';
+  document.getElementById('descInput').focus();
+}
+
+async function copyResult() {
+  const text = document.getElementById('resultName').textContent;
+  const btn = document.getElementById('copyBtn');
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy to clipboard`;
+    }, 2000);
+  } catch { alert('Copy failed — please select and copy the text manually.'); }
+}
+
+document.getElementById('descInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generateName();
+});
+</script>
+
+</body>
+</html>

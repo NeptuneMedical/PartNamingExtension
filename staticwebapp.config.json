@@ -1,0 +1,15 @@
+{
+  "routes": [],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif}", "/css/*"]
+  },
+  "globalHeaders": {
+    "Cache-Control": "no-store"
+  },
+  "mimeTypes": {
+    ".html": "text/html",
+    ".js": "text/javascript",
+    ".css": "text/css"
+  }
+}
